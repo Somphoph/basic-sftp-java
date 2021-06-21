@@ -1,39 +1,33 @@
 package org.basic;
 
-import com.jcraft.jsch.Channel;
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.ChannelSftp.LsEntry;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
+import com.jcraft.jsch.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
-import org.apache.log4j.Logger;
-
 
 public class BasicSftp {
-    private static final Logger log = Logger.getLogger(BasicSftp.class);
+    private static final Logger log = LoggerFactory.getLogger(BasicSftp.class);
 
-    public void putFile(SFTPConfig conf, String localFilePath, String remoteFilePath)
-            throws Exception {
+    public void putFile(SFTPConfig conf, String localFilePath, String remoteFilePath) throws SftpException, JSchException {
         Session session = null;
         ChannelSftp sftpChannel = null;
         try {
-            ConnectionObj connObj = connect(session, sftpChannel, conf);
+            ConnectionObj connObj = connect(conf);
             session = connObj.getSession();
             sftpChannel = connObj.getSftpChannel();
 
             File remoteFile = new File(remoteFilePath);
             File remoteDir = remoteFile.getParentFile();
 
-            log.info("Working directory : " + sftpChannel.pwd());
+            String workingDir = sftpChannel.pwd();
+            log.info("Working directory : {}", workingDir);
 
-            log.info("Change directory to : " + remoteDir.getPath());
+            log.info("Change directory to : {}", remoteDir.getPath());
 
             prepareDirectory(sftpChannel, remoteDir.getPath());
 
@@ -42,29 +36,26 @@ public class BasicSftp {
             if (localDir.isDirectory()) {
                 sftpChannel.lcd(localDir.getPath());
             }
-            log.info("Upload file : " + localFilePath + " to : " + remoteFile.getName());
+            log.info("Upload file : {} to : {} ", localFilePath, remoteFile.getName());
             sftpChannel.put(localFilePath, remoteFile.getName());
-        } catch (Exception e) {
-            log.error(e);
-            throw e;
         } finally {
             disconnect(session, sftpChannel);
         }
     }
 
 
-    public void putFile(SFTPConfig conf, String localPath, String matchFile, String remotePath)
-            throws Exception {
+    public void putFile(SFTPConfig conf, String localPath, String matchFile, String remotePath) throws JSchException, SftpException {
         Session session = null;
         ChannelSftp sftpChannel = null;
         try {
-            ConnectionObj connObj = connect(session, sftpChannel, conf);
+            ConnectionObj connObj = connect(conf);
             session = connObj.getSession();
             sftpChannel = connObj.getSftpChannel();
 
-            log.info("Working directory : " + sftpChannel.pwd());
+            String workingDir = sftpChannel.pwd();
+            log.info("Working directory : {} ", workingDir);
 
-            log.info("Change directory to : " + remotePath);
+            log.info("Change directory to : {} ", remotePath);
             prepareDirectory(sftpChannel, remotePath);
 
             sftpChannel.lcd(localPath);
@@ -72,35 +63,29 @@ public class BasicSftp {
             File[] files = getSourceFiles(localPath, matchFile);
 
             for (File file : files) {
-                log.info("Upload file : " + file.getName() + " to : " + file.getName());
+                log.info("Upload file : {} to : {} ", file.getName(), file.getName());
                 sftpChannel.put(file.getName(), file.getName());
             }
-        } catch (Exception e) {
-            log.error(e);
-            throw e;
         } finally {
             disconnect(session, sftpChannel);
         }
     }
 
-    private void get(SFTPConfig conf, String remoteFile, String localFile) throws Exception {
+    private void get(SFTPConfig conf, String remoteFile, String localFile) throws JSchException, SftpException {
         Session session = null;
         ChannelSftp sftpChannel = null;
         try {
-            ConnectionObj connObj = connect(session, sftpChannel, conf);
+            ConnectionObj connObj = connect(conf);
             session = connObj.getSession();
             sftpChannel = connObj.getSftpChannel();
 
             sftpChannel.get(remoteFile, localFile);
-        } catch (Exception e) {
-            log.error(e);
-            throw e;
         } finally {
             disconnect(session, sftpChannel);
         }
     }
 
-    public void getFile(SFTPConfig conf, String remoteFile, String localPath) throws Exception {
+    public void getFile(SFTPConfig conf, String remoteFile, String localPath) throws JSchException, SftpException {
         File remote = new File(remoteFile);
         String fileName = remote.getName();
 
@@ -113,11 +98,11 @@ public class BasicSftp {
         get(conf, remoteFile, localFile);
     }
 
-    public void getFromDir(SFTPConfig conf, String remoteDir, String localDir) throws Exception {
+    public void getFromDir(SFTPConfig conf, String remoteDir, String localDir) throws JSchException, SftpException {
         Session session = null;
         ChannelSftp sftpChannel = null;
         try {
-            ConnectionObj connObj = connect(session, sftpChannel, conf);
+            ConnectionObj connObj = connect(conf);
             session = connObj.getSession();
             sftpChannel = connObj.getSftpChannel();
             String exp = remoteDir + "/*";
@@ -128,34 +113,28 @@ public class BasicSftp {
 
                 sftpChannel.get(remoteFile, localFile);
             }
-        } catch (Exception e) {
-            log.error(e);
-            throw e;
         } finally {
             disconnect(session, sftpChannel);
         }
     }
 
-    public void remove(SFTPConfig conf, String remotePath) throws Exception {
+    public void remove(SFTPConfig conf, String remotePath) throws JSchException, SftpException {
         Session session = null;
         ChannelSftp sftpChannel = null;
         try {
-            ConnectionObj connObj = connect(session, sftpChannel, conf);
+            ConnectionObj connObj = connect(conf);
             session = connObj.getSession();
             sftpChannel = connObj.getSftpChannel();
             String exp = remotePath;
             sftpChannel.rm(exp);
-        } catch (Exception e) {
-            log.error(e);
-            throw e;
         } finally {
             disconnect(session, sftpChannel);
         }
     }
 
-    private ConnectionObj connect(Session session, ChannelSftp sftpChannel, SFTPConfig conf) throws JSchException {
+    private ConnectionObj connect(SFTPConfig conf) throws JSchException {
         JSch jsch = new JSch();
-        session = jsch.getSession(conf.getUsr(), conf.getHost(), conf.getPort());
+        Session session = jsch.getSession(conf.getUsr(), conf.getHost(), conf.getPort());
 
         session.setConfig("StrictHostKeyChecking", "no");
         if ((conf.getPwd() != null) && (!"".equals(conf.getPwd()))) {
@@ -172,7 +151,7 @@ public class BasicSftp {
         channel.connect();
         log.info("Channel connected.");
 
-        sftpChannel = (ChannelSftp) channel;
+        ChannelSftp sftpChannel = (ChannelSftp) channel;
         ConnectionObj obj = new ConnectionObj();
         obj.setSession(session);
         obj.setSftpChannel(sftpChannel);
@@ -186,7 +165,7 @@ public class BasicSftp {
                     sftpChannel.exit();
                 }
             } catch (Exception e) {
-                log.error(e);
+                log.error("Disconnect error on close channel.", e);
             }
         }
 
@@ -196,7 +175,7 @@ public class BasicSftp {
                     session.disconnect();
                 }
             } catch (Exception e) {
-                log.error(e);
+                log.error("Disconnect error on disconnect session.", e);
             }
         }
     }
@@ -208,57 +187,56 @@ public class BasicSftp {
         }
 
 
-        if (sourceFileName.indexOf("*") > -1) {
-            dir.listFiles(new FilenameFilter() {
-                public boolean accept(File dir, String name) {
-                    boolean match = false;
-
-                    String[] matchs = sourceFileName.split(".*");
-
-                    int i = 0;
-                    for (int idx = 0; i < matchs.length; i++) {
-                        int fidx = name.indexOf(matchs[i], idx);
-                        if (fidx > -1) {
-                            match = true;
-                            idx = fidx + matchs[i].length();
-                        } else {
-                            match = false;
-                            break;
-                        }
-                    }
-                    return match;
-                }
-            });
+        if (sourceFileName.contains("*")) {
+            dir.listFiles((dir1, name) -> fileName(sourceFileName, name));
         }
 
         return new File[0];
     }
 
-    private void prepareDirectory(ChannelSftp sftp, String directory) throws Exception {
+    private boolean fileName(String sourceFileName, String name) {
+        boolean match = false;
+        String[] matchs = sourceFileName.split(".*");
+
+        int i = 0;
+        for (int idx = 0; i < matchs.length; i++) {
+            int fidx = name.indexOf(matchs[i], idx);
+            if (fidx > -1) {
+                match = true;
+                idx = fidx + matchs[i].length();
+            } else {
+                match = false;
+                break;
+            }
+        }
+        return match;
+    }
+
+    private void prepareDirectory(ChannelSftp sftp, String directory) throws SftpException {
         File dir = new File(directory);
-        List<String> dirs = new ArrayList();
+        List<String> dirs = new ArrayList<>();
 
         File tdir = dir;
         while (tdir.getParentFile() != null) {
-            dirs.add(0, tdir.getParent().replaceAll("\\\\", "/"));
+            dirs.add(0, tdir.getParent().replace("\\\\", "/"));
             tdir = tdir.getParentFile();
         }
-        dirs.add(dir.getPath().replaceAll("\\\\", "/"));
+        dirs.add(dir.getPath().replace("\\\\", "/"));
 
         for (String d : dirs) {
             try {
                 sftp.cd(d);
             } catch (Exception e) {
-                log.error(e);
-                log.info("Can't access directory : " + d + ".");
+                log.info("Can't access directory : " + d + ".", e);
             }
-            log.info("Working directory :" + sftp.pwd());
+            String workingDir = sftp.pwd();
+            log.info("Working directory : {}", workingDir);
             if (!d.equals(sftp.pwd())) {
                 log.info("Try to make destination directory...");
                 File rdir = new File(d);
-                log.info("Create directory : " + rdir.getName());
+                log.info("Create directory : {} ", rdir.getName());
                 sftp.mkdir(rdir.getName());
-                log.info("Change working directory to :" + d);
+                log.info("Change working directory to : {} ", d);
                 sftp.cd(d);
             }
         }
