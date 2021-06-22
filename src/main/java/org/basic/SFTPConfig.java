@@ -9,6 +9,7 @@ public class SFTPConfig {
     private String usr;
 
     private String pwd;
+    private String privateKeyFile;
 
 
     public String getHost() {
@@ -41,5 +42,13 @@ public class SFTPConfig {
 
     public void setPwd(String pwd) {
         this.pwd = pwd;
+    }
+
+    public void setPrivateKeyFile(String privateKeyFile) {
+        this.privateKeyFile = privateKeyFile;
+    }
+
+    public String getPrivateKeyFile() {
+        return privateKeyFile;
     }
 }
