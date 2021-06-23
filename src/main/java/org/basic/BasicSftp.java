@@ -134,12 +134,16 @@ public class BasicSftp {
 
     private ConnectionObj connect(SFTPConfig conf) throws JSchException {
         JSch jsch = new JSch();
+        if (conf.getPrivateKeyFile() != null && !conf.getPrivateKeyFile().trim().isEmpty()) {
+            jsch.addIdentity(conf.getPrivateKeyFile());
+        }
         Session session = jsch.getSession(conf.getUsr(), conf.getHost(), conf.getPort());
 
         session.setConfig("StrictHostKeyChecking", "no");
-        if ((conf.getPwd() != null) && (!"".equals(conf.getPwd()))) {
+        if (conf.getPwd() != null && !"".equals(conf.getPwd())) {
             session.setPassword(conf.getPwd());
         }
+
         session.setTimeout(300000);
         log.info("Session connect...");
         session.connect();
