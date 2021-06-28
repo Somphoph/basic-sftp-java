@@ -217,30 +217,21 @@ public class BasicSftp {
     }
 
     private void prepareDirectory(ChannelSftp sftp, String directory) throws SftpException {
-        File dir = new File(directory);
-        List<String> dirs = new ArrayList<>();
+        directory = directory.replace("\\\\", "/");
+        directory = directory.replace("\\", "/");
+        directory = directory.replaceFirst(sftp.getHome(), "");
 
-        File tdir = dir;
-        while (tdir.getParentFile() != null) {
-            dirs.add(0, tdir.getParent().replace("\\\\", "/"));
-            tdir = tdir.getParentFile();
-        }
-        dirs.add(dir.getPath().replace("\\\\", "/"));
+        String[] dirs = directory.split("/");
 
         for (String d : dirs) {
+            if (d.equals("/") || d.equals("\\") || d.equals("")) {
+                continue;
+            }
             try {
                 sftp.cd(d);
             } catch (Exception e) {
                 log.info("Can't access directory : " + d + ".", e);
-            }
-            String workingDir = sftp.pwd();
-            log.info("Working directory : {}", workingDir);
-            if (!d.equals(sftp.pwd())) {
-                log.info("Try to make destination directory...");
-                File rdir = new File(d);
-                log.info("Create directory : {} ", rdir.getName());
-                sftp.mkdir(rdir.getName());
-                log.info("Change working directory to : {} ", d);
+                sftp.mkdir(d);
                 sftp.cd(d);
             }
         }
