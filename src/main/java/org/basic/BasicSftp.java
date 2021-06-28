@@ -5,8 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Vector;
 
 
@@ -230,7 +228,7 @@ public class BasicSftp {
             try {
                 sftp.cd(d);
             } catch (Exception e) {
-                log.info("Can't access directory : " + d + ".", e);
+                log.info("Can't access directory : " + d + "", e);
                 sftp.mkdir(d);
                 sftp.cd(d);
             }
