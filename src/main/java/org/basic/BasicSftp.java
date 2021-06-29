@@ -27,7 +27,7 @@ public class BasicSftp {
 
             log.info("Change directory to : {}", remoteDir.getPath());
 
-            prepareDirectory(sftpChannel, remoteDir.getPath());
+            changeDirectory(sftpChannel, remoteDir.getPath());
 
             File localFile = new File(localFilePath);
             File localDir = localFile.getParentFile();
@@ -38,6 +38,14 @@ public class BasicSftp {
             sftpChannel.put(localFilePath, remoteFile.getName());
         } finally {
             disconnect(session, sftpChannel);
+        }
+    }
+
+    private void changeDirectory(ChannelSftp sftp, String path) throws SftpException {
+        try {
+            sftp.cd(path);
+        } catch (SftpException e) {
+            prepareDirectory(sftp, path);
         }
     }
 
@@ -54,7 +62,8 @@ public class BasicSftp {
             log.info("Working directory : {} ", workingDir);
 
             log.info("Change directory to : {} ", remotePath);
-            prepareDirectory(sftpChannel, remotePath);
+
+            changeDirectory(sftpChannel, remotePath);
 
             sftpChannel.lcd(localPath);
 
@@ -217,10 +226,9 @@ public class BasicSftp {
     private void prepareDirectory(ChannelSftp sftp, String directory) throws SftpException {
         directory = directory.replace("\\\\", "/");
         directory = directory.replace("\\", "/");
-        directory = directory.replaceFirst(sftp.getHome(), "");
 
         String[] dirs = directory.split("/");
-
+        sftp.cd("/");
         for (String d : dirs) {
             if (d.equals("/") || d.equals("\\") || d.equals("")) {
                 continue;
