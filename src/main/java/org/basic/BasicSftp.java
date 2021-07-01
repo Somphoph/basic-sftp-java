@@ -152,15 +152,15 @@ public class BasicSftp {
         }
 
         session.setTimeout(300000);
-        log.info("Session connect...");
+        log.debug("Session connect...");
         session.connect();
-        log.info("Session connected.");
+        log.debug("Session connected.");
 
         Channel channel = session.openChannel("sftp");
 
-        log.info("Channel connect...");
+        log.debug("Channel connect...");
         channel.connect();
-        log.info("Channel connected.");
+        log.debug("Channel connected.");
 
         ChannelSftp sftpChannel = (ChannelSftp) channel;
         ConnectionObj obj = new ConnectionObj();
